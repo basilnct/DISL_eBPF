@@ -27,7 +27,7 @@ module shifter(stb, arith, left, value, shift, out, ack);
 			ack <= 1;
 		end else if (stb) begin
 			if (~left) begin
-				tmp1 <= (0 >> shift);		// ????? check replicate in migen
+				tmp1 <= ~({data_width{1}} >> shift);
 				tmp2 <= (value >> shift);
 			end else begin
 				tmp2 <= (value << shift);
