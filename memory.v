@@ -1,4 +1,4 @@
-module Memory(address, data_in, data_out, write_enable, clk);
+module memory(address, data_in, data_out, write_enable, clk);
 
 	parameter data_size = 64;
 	parameter address_size = 5;
