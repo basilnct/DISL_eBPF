@@ -12,6 +12,11 @@ parameter STATE_DIV_PENDING = 3;
 parameter STATE_CALL_PENDING = 4;
 parameter STATE_HALT = 5;
 
+// -------------clk rst----------------
+
+input sys_clk;
+input sys_rst;
+
 
 // --------CSR (MMIO) Registers--------
 
@@ -43,11 +48,17 @@ output reg [63:0] ticks;
 // bits: 0-rst_n
 input reg [7:0] r_ctl;
 
+// Create register bank with direct accessors for each register in bank.
 
 
-call_handler call_handler();
+// ----------Call Handler--------------
+call_handler call_handler(.func(), .clk(), .stb(), .IP4_led(), .IPv6_led(), .pkt_err_led.());
 
 
+reg reset_n_int;
+reg [2:0] state;	// 6 possible state, so 3 bits required
+reg [2:0] state_next;
+reg data_ack, div64_ack;
 
 
 
@@ -64,6 +75,32 @@ call_handler call_handler();
 // +------------------------+----------------+----+----+--------+
 // 63                     32               16   12    8        0
 
+        instruction = Signal(64)
+        opcode = Signal(8)
+        opclass = Signal(3)
+        dst = Signal(4)
+        src = Signal(4)
+        offset = Signal(16)
+        offset_s = Signal((16, True))
+        immediate = Signal(32)
+        immediate_s = Signal((32, True))
+        keep_op = Signal(8)
+        keep_dst = Signal(4)
+
+        src_reg = Signal(64)
+        src_reg_s = Signal((64, True))
+        src_reg_32 = Signal(32)
+        src_reg_32_s = Signal((32, True))
+
+        dst_reg = Signal(64)
+        dst_reg_s = Signal((64, True))
+        dst_reg_32 = Signal(32)
+        dst_reg_32_s = Signal((32, True))
+
+        ip = Signal(32)
+        ip_next = Signal(32)
+
+
 
 // MSB                                                        LSB
 // | Byte 8 | Byte 7  | Byte 5-6       | Byte 1-4               |
@@ -72,10 +109,6 @@ call_handler call_handler();
 // +--------+----+----+----------------+------------------------+
 // 63     56   52   48               32                        0
 
-
-module call_handler();
-
-endmodule
 
 
 
