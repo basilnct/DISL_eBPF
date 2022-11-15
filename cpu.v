@@ -75,32 +75,46 @@ reg data_ack, div64_ack;
 // +------------------------+----------------+----+----+--------+
 // 63                     32               16   12    8        0
 
-        instruction = Signal(64)
-        opcode = Signal(8)
-        opclass = Signal(3)
-        dst = Signal(4)
-        src = Signal(4)
-        offset = Signal(16)
-        offset_s = Signal((16, True))
-        immediate = Signal(32)
-        immediate_s = Signal((32, True))
-        keep_op = Signal(8)
-        keep_dst = Signal(4)
+        
 
-        src_reg = Signal(64)
-        src_reg_s = Signal((64, True))
-        src_reg_32 = Signal(32)
-        src_reg_32_s = Signal((32, True))
+reg [63:0] instruction;
+reg [7:0] opcode;
+reg [2:0] opclass;
+reg [3:0] dst;
+reg [3:0] src;
+reg [15:0] offset;
+reg signed [15:0] offset_s;
+reg [31:0] immediate;
+reg signed [31:0] immediate_s;
+reg [7:0] keep_op;
+reg [3:0] keep_dst;
 
-        dst_reg = Signal(64)
-        dst_reg_s = Signal((64, True))
-        dst_reg_32 = Signal(32)
-        dst_reg_32_s = Signal((32, True))
+reg [63:0] src_reg;
+reg signed [63:0] src_reg_s;
+reg [31:0] src_reg_32;
+reg signed [31:0] src_reg_32_s;
 
-        ip = Signal(32)
-        ip_next = Signal(32)
+reg [63:0] dst_reg;
+reg signed [63:0] dst_reg_s;
+reg [31:0] dst_reg_32;
+reg signed [31:0] dst_reg_32_s;
 
+reg [31:0] ip;
+reg [31:0] ip_next;
 
+// --------Program Memory--------
+// max program memory words is 4096 = 2^12
+module memory #(data_size = 64, address_size = 12) pgm(.address(), .data_in(), .data_out(), .write_enable(), .clk(clk));
+
+// -------Data Memory (e.g Packet Data)-------
+// max program memory words is 2048 = 2^11
+module memory #(data_size = 64, address_size = 11) data_mem(.address(), .data_in(), .data_out(), .write_enable(), .clk(clk));
+
+// -------64 Bit Math Divider-------
+module
+
+// -------64 Bit Logic and Arithmetic Shifter-------
+module
 
 // MSB                                                        LSB
 // | Byte 8 | Byte 7  | Byte 5-6       | Byte 1-4               |
