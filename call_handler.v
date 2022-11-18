@@ -64,7 +64,8 @@ always @(posedge clk) begin
 					ack <= 1;
 				end
 			end
-
+			
+			// Else throw an err
 			default: begin
 				err <= 1;
 				ack <= 1;
