@@ -1174,38 +1174,255 @@ always @(posedge clock or posedge reset_n) begin
 						cpu_div64_ack <= 0;
 						case (opcode)
 						
-							EBPF_OP_DIV64_IMM
-							EBPF_OP_DIV64_REG
-							EBPF_OP_MOD64_IMM
-							EBPF_OP_MOD64_REG
-							EBPF_OP_ARSH64_IMM
-							EBPF_OP_ARSH64_REG
-							EBPF_OP_LSH64_IMM
-							EBPF_OP_LSH64_REG
-							EBPF_OP_RSH64_IMM
-							EBPF_OP_RSH64_REG
+							// EBPF_OP_DIV64_IMM
+							EBPF_OP_DIV64_IMM: begin
+								if (~cpu_div64_ack) begin
+									div64_dividend <= regs[dst];
+									div64_divisor <= immediate;
+									state_next <= STATE_DIV_PENDING;
+									div64_stb <= 1;
+								end else begin
+									reg[dst] <= div64_quotient;
+									ip_next <= ip_next + 1;
+									ip <= ip_next;
+									instruction <= pgm_dat_r;
+								end
+							end // EBPF_OP_DIV64_IMM
+
+							// EBPF_OP_DIV64_REG
+							EBPF_OP_DIV64_REG: begin
+								if (~cpu_div64_ack) begin
+									div64_dividend <= regs[dst];
+									div64_divisor <= regs[src];
+									state_next <= STATE_DIV_PENDING;
+									div64_stb <= 1;
+								end else begin
+									reg[dst] <= div64_quotient;
+									ip_next <= ip_next + 1;
+									ip <= ip_next;
+									instruction <= pgm_dat_r;
+								end
+							end // EBPF_OP_DIV64_REG
+
+							// EBPF_OP_MOD64_IMM
+							EBPF_OP_MOD64_IMM: begin
+								if (~cpu_div64_ack) begin
+									div64_dividend <= regs[dst];
+									div64_divisor <= immediate;
+									state_next <= STATE_DIV_PENDING;
+									div64_stb <= 1;
+								end else begin
+									reg[dst] <= div64_remainder;
+									ip_next <= ip_next + 1;
+									ip <= ip_next;
+									instruction <= pgm_dat_r;
+								end
+							end // EBPF_OP_MOD64_IMM
+
+							// EBPF_OP_MOD64_REG
+							EBPF_OP_MOD64_REG: begin
+								if (~cpu_div64_ack) begin
+									div64_dividend <= regs[dst];
+									div64_divisor <= regs[src];
+									state_next <= STATE_DIV_PENDING;
+									div64_stb <= 1;
+								end else begin
+									reg[dst] <= div64_remainder;
+									ip_next <= ip_next + 1;
+									ip <= ip_next;
+									instruction <= pgm_dat_r;
+								end
+							end // EBPF_OP_MOD64_REG
+
+							// EBPF_OP_ARSH64_IMM
+							EBPF_OP_ARSH64_IMM: begin
+								if (~arsh64_ack) begin
+									arsh64_value <= regs[dst];
+									arsh64_shift <= immediate;
+									arsh64_arith <= 1;
+									arsh64_left <= 0;
+									arsh_stb <= 1;
+								end else begin
+									reg[dst] <= arsh64_out;
+									arsh64_stb <= 0;
+									ip_next <= ip_next + 1;
+									ip <= ip_next;
+									instruction <= pgm_dat_r;
+								end
+							end // EBPF_OP_ARSH64_IMM
+
+							// EBPF_OP_ARSH64_REG
+							EBPF_OP_ARSH64_REG: begin
+								if (~arsh64_ack) begin
+									arsh64_value <= regs[dst];
+									arsh64_shift <= regs[src];
+									arsh64_arith <= 1;
+									arsh64_left <= 0;
+									arsh_stb <= 1;
+								end else begin
+									reg[dst] <= arsh64_out;
+									arsh64_stb <= 0;
+									ip_next <= ip_next + 1;
+									ip <= ip_next;
+									instruction <= pgm_dat_r;
+								end
+							end // EBPF_OP_ARSH64_REG
+
+							// EBPF_OP_LSH64_IMM
+							EBPF_OP_LSH64_IMM: begin
+								if (~arsh64_ack) begin
+									arsh64_value <= regs[dst];
+									arsh64_shift <= immediate;
+									arsh64_arith <= 0;
+									arsh64_left <= 1;
+									arsh_stb <= 1;
+								end else begin
+									reg[dst] <= arsh64_out;
+									arsh64_stb <= 0;
+									ip_next <= ip_next + 1;
+									ip <= ip_next;
+									instruction <= pgm_dat_r;
+								end
+							end // EBPF_OP_LSH64_IMM
+
+							// EBPF_OP_LSH64_REG
+							EBPF_OP_LSH64_REG: begin
+								if (~arsh64_ack) begin
+									arsh64_value <= regs[dst];
+									arsh64_shift <= regs[src];
+									arsh64_arith <= 0;
+									arsh64_left <= 1;
+									arsh_stb <= 1;
+								end else begin
+									reg[dst] <= arsh64_out;
+									arsh64_stb <= 0;
+									ip_next <= ip_next + 1;
+									ip <= ip_next;
+									instruction <= pgm_dat_r;
+								end
+							end // EBPF_OP_LSH64_REG
+
+							// EBPF_OP_RSH64_IMM
+							EBPF_OP_RSH64_IMM: begin
+								if (~arsh64_ack) begin
+									arsh64_value <= regs[dst];
+									arsh64_shift <= immediate;
+									arsh64_arith <= 0;
+									arsh64_left <= 0;
+									arsh_stb <= 1;
+								end else begin
+									reg[dst] <= arsh64_out;
+									arsh64_stb <= 0;
+									ip_next <= ip_next + 1;
+									ip <= ip_next;
+									instruction <= pgm_dat_r;
+								end
+							end // EBPF_OP_RSH64_IMM
+
+							// EBPF_OP_RSH64_REG
+							EBPF_OP_RSH64_REG: begin
+								if (~arsh64_ack) begin
+									arsh64_value <= regs[dst];
+									arsh64_shift <= regs[src];
+									arsh64_arith <= 0;
+									arsh64_left <= 0;
+									arsh_stb <= 1;
+								end else begin
+									reg[dst] <= arsh64_out;
+									arsh64_stb <= 0;
+									ip_next <= ip_next + 1;
+									ip <= ip_next;
+									instruction <= pgm_dat_r;
+								end
+							end // EBPF_OP_RSH64_REG
 
 							// default
 							default: begin
 								case (opcode)
-									EBPF_OP_ADD64_IMM
-									EBPF_OP_ADD64_REG
-									EBPF_OP_SUB64_IMM
-									EBPF_OP_SUB64_REG
-									EBPF_OP_MUL64_IMM
-									EBPF_OP_MUL64_REG
-									EBPF_OP_OR64_IMM
-									EBPF_OP_OR64_REG
-									EBPF_OP_AND64_IMM
-									EBPF_OP_AND64_REG
-									EBPF_OP_NEG64
-									EBPF_OP_XOR64_IMM
-									EBPF_OP_XOR64_REG
-									EBPF_OP_MOV64_IMM
-									EBPF_OP_MOV64_REG
-									default
-									
+									// EBPF_OP_ADD64_IMM
+									EBPF_OP_ADD64_IMM: begin
+										regs[dst] <= (regs[dst] + immediate);
+									end // EBPF_OP_ADD64_IMM
+
+									// EBPF_OP_ADD64_REG
+									EBPF_OP_ADD64_REG: begin
+										regs[dst] <= (regs[dst] + regs[src]);
+									end // EBPF_OP_ADD64_REG
+
+									// EBPF_OP_SUB64_IMM
+									EBPF_OP_SUB64_IMM: begin
+										regs[dst] <= (regs[dst] - immediate);
+									end // EBPF_OP_SUB64_IMM
+
+									// EBPF_OP_SUB64_REG
+									EBPF_OP_SUB64_REG: begin
+										regs[dst] <= (regs[dst] - regs[src]);
+									end // EBPF_OP_SUB64_REG
+
+									// EBPF_OP_MUL64_IMM
+									EBPF_OP_MUL64_IMM: begin
+										regs[dst] <= (regs[dst] * immediate);
+									end // EBPF_OP_MUL64_IMM
+
+									// EBPF_OP_MUL64_REG
+									EBPF_OP_MUL64_REG: begin
+										regs[dst] <= (regs[dst] * regs[src]);
+									end // EBPF_OP_MUL64_REG
+
+									// EBPF_OP_OR64_IMM
+									EBPF_OP_OR64_IMM: begin
+										regs[dst] <= (regs[dst] | immediate);
+									end // EBPF_OP_OR64_IMM
+
+									// EBPF_OP_OR64_REG
+									EBPF_OP_OR64_REG: begin
+										regs[dst] <= (regs[dst] | regs[src]);
+									end // EBPF_OP_OR64_REG
+
+									// EBPF_OP_AND64_IMM
+									EBPF_OP_AND64_IMM: begin
+										regs[dst] <= (regs[dst] & immediate);
+									end // EBPF_OP_AND64_IMM
+
+									// EBPF_OP_AND64_REG
+									EBPF_OP_AND64_REG: begin
+										regs[dst] <= (regs[dst] & regs[src]);
+									end // EBPF_OP_AND64_REG
+
+									// EBPF_OP_NEG64
+									EBPF_OP_NEG64: begin
+										regs[dst] <= (-regs[src]);
+									end // EBPF_OP_NEG64
+
+									// EBPF_OP_XOR64_IMM
+									EBPF_OP_XOR64_IMM: begin
+										regs[dst] <= (regs[dst] ^ immediate);
+									end // EBPF_OP_XOR64_IMM
+
+									// EBPF_OP_XOR64_REG
+									EBPF_OP_XOR64_REG: begin
+										regs[dst] <= (regs[dst] ^ regs[src]);
+									end // EBPF_OP_XOR64_REG
+
+									// EBPF_OP_MOV64_IMM
+									EBPF_OP_MOV64_IMM: begin
+										regs[dst] <= immediate;
+									end // EBPF_OP_MOV64_IMM
+
+									// EBPF_OP_MOV64_REG
+									EBPF_OP_MOV64_REG: begin
+										regs[dst] <= regs[src];
+									end // EBPF_OP_MOV64_REG
+
+									// default
+									default: begin
+										error <= 1;
+										halt <= 1;
+									end // default
 								endcase // opcode
+								ip_next <= ip_next + 1;
+								ip <= ip_next;
+								instruction <= pgm_dat_r;
 							end // default	
 						endcase // opcode
 					end // OPC_ALU64
