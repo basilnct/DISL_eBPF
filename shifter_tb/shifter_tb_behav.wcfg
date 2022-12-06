@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wave_config>
+   <wave_state>
+   </wave_state>
+   <db_ref_list>
+      <db_ref path="shifter_tb_behav.wdb" id="1">
+         <top_modules>
+            <top_module name="glbl" />
+            <top_module name="shifter_tb" />
+         </top_modules>
+      </db_ref>
+   </db_ref_list>
+   <zoom_setting>
+      <ZoomStartTime time="0.000 ns"></ZoomStartTime>
+      <ZoomEndTime time="800.001 ns"></ZoomEndTime>
+      <Cursor1Time time="103.766 ns"></Cursor1Time>
+   </zoom_setting>
+   <column_width_setting>
+      <NameColumnWidth column_width="188"></NameColumnWidth>
+      <ValueColumnWidth column_width="126"></ValueColumnWidth>
+   </column_width_setting>
+   <WVObjectSize size="8" />
+   <wvobject fp_name="/shifter_tb/stb" type="logic">
+      <obj_property name="ElementShortName">stb</obj_property>
+      <obj_property name="ObjectShortName">stb</obj_property>
+   </wvobject>
+   <wvobject fp_name="/shifter_tb/clk" type="logic">
+      <obj_property name="ElementShortName">clk</obj_property>
+      <obj_property name="ObjectShortName">clk</obj_property>
+   </wvobject>
+   <wvobject fp_name="/shifter_tb/arith" type="logic">
+      <obj_property name="ElementShortName">arith</obj_property>
+      <obj_property name="ObjectShortName">arith</obj_property>
+   </wvobject>
+   <wvobject fp_name="/shifter_tb/left" type="logic">
+      <obj_property name="ElementShortName">left</obj_property>
+      <obj_property name="ObjectShortName">left</obj_property>
+   </wvobject>
+   <wvobject fp_name="/shifter_tb/value" type="array">
+      <obj_property name="ElementShortName">value[63:0]</obj_property>
+      <obj_property name="ObjectShortName">value[63:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/shifter_tb/shift" type="array">
+      <obj_property name="ElementShortName">shift[63:0]</obj_property>
+      <obj_property name="ObjectShortName">shift[63:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/shifter_tb/out" type="array">
+      <obj_property name="ElementShortName">out[63:0]</obj_property>
+      <obj_property name="ObjectShortName">out[63:0]</obj_property>
+   </wvobject>
+   <wvobject fp_name="/shifter_tb/ack" type="logic">
+      <obj_property name="ElementShortName">ack</obj_property>
+      <obj_property name="ObjectShortName">ack</obj_property>
+   </wvobject>
+</wave_config>
