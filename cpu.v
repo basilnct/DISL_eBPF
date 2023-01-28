@@ -1,4 +1,4 @@
-module cpu();
+module cpu(clock, reset_n, csr_ctl, csr_status, r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, ticks);
 
 // -------------Parameters----------------
 
@@ -227,11 +227,11 @@ parameter EBPF_OP_JSLE_REG   = (OPC_JMP|EBPF_SRC_REG|EBPF_OP_JSLE);
 
 // -------------Direct CPU Status and Control Signals----------------
 
-input clk;
+input clock;
 input reset_n;
-input error;
-input halt;
-input debug;
+reg error;
+reg halt;
+reg debug;
 
 
 // --------CSR (MMIO) Registers--------
@@ -256,10 +256,9 @@ assign csr_status[7] = debug;
 // Create register bank with direct accessors for each register in bank.
 reg [63:0] regs [MAX_REGS-1:0];
 
-
 // Result Register R0
-output [63:0] r0 = regs[0];
-
+output [63:0] r0;
+assign r0 = regs[0];
 
 // Input Registers (r1 - r5 are in sync block)
 input [63:0] r1;
@@ -268,20 +267,24 @@ input [63:0] r3;
 input [63:0] r4;
 input [63:0] r5;
 
-
 // Output Registers
-output [63:0] r6 = regs[6];
-output [63:0] r7 = regs[7];
-output [63:0] r8 = regs[8];
-output [63:0] r9 = regs[9];
-output [63:0] r10 = regs[10];
-
+output [63:0] r6;
+assign r6 = regs[6];
+output [63:0] r7;
+assign r7 = regs[7];
+output [63:0] r8;
+assign r8 = regs[8];
+output [63:0] r9;
+assign r9 = regs[9];
+output [63:0] r10;
+assign r10 = regs[10];
 
 // clock ticks between resest going high and halt going high
 output reg [63:0] ticks;
 
 
 // ------------FSM------------
+
 reg [2:0] state;	// 6 possible state, so 3 bits required
 reg [2:0] state_next;
 reg cpu_data_ack, cpu_div64_ack;
@@ -295,78 +298,106 @@ reg cpu_data_ack, cpu_div64_ack;
 // little-endian byte-order.
 
 // MSB                                                        LSB
-// +------------------------+----------------+----+----+--------+
-// |immediate               |offset          |src |dst |opcode  |
-// +------------------------+----------------+----+----+--------+
-// 63                     32               16   12    8        0
-
+// | Byte 8 | Byte 7  | Byte 5-6       | Byte 1-4               |
+// +--------+----+----+----------------+------------------------+
+// |opcode  | src| dst|          offset|               immediate|
+// +--------+----+----+----------------+------------------------+
+// 63     56   52   48               32                        0
         
 reg [63:0] instruction;
-reg [7:0] opcode;
-reg [2:0] opclass;
-reg [3:0] dst;
-reg [3:0] src;
-reg [15:0] offset;
-reg signed [15:0] offset_s;
-reg [31:0] immediate;
-reg signed [31:0] immediate_s;
+
 reg [7:0] keep_op;
 reg [3:0] keep_dst;
-
-reg [63:0] src_reg;
-reg signed [63:0] src_reg_s;
-reg [31:0] src_reg_32;
-reg signed [31:0] src_reg_32_s;
-
-reg [63:0] dst_reg;
-reg signed [63:0] dst_reg_s;
-reg [31:0] dst_reg_32;
-reg signed [31:0] dst_reg_32_s;
 
 reg [31:0] ip;
 reg [31:0] ip_next;
 
 
+// Continuous Assignment
+// Byte 8
+wire [7:0] opcode = ((keep_op == 0) ? (instruction[63:56]) : (keep_op)) ;
+wire [2:0] opclass = opcode[2:0];
+
+// Byte 7
+wire [3:0] src = instruction[55:52];
+wire [3:0] dst = ((keep_dst == 0) ? (instruction[51:48]) : (keep_dst));
+
+// Byte 5-6
+wire [15:0] offset = {instruction[47:40], instruction[39:32]};
+wire signed [15:0] offset_s = offset;
+
+// Byte 1-4
+wire [31:0] immediate = {instruction[31:24], instruction[23:16], instruction[15:8], instruction[7:0]};
+wire signed [31:0] immediate_s = immediate;
+
+
+wire [63:0] src_reg = regs[src];
+wire signed [63:0] src_reg_s = regs[src];
+wire [31:0] src_reg_32 = regs[src];
+wire signed [31:0] src_reg_32_s = regs[src];
+
+wire [63:0] dst_reg = regs[dst];
+wire signed [63:0] dst_reg_s = regs[dst];
+wire [31:0] dst_reg_32 = regs[dst];
+wire signed [31:0] dst_reg_32_s = regs[dst];
+
+
 // --------Program Memory--------
 // max program memory words is 4096 = 2^12
-wire [63:0] pgm_adr = ip_next;
-
-reg [63:0] pgm_dat_r;
-
-module memory #(data_size = 64, address_size = 12) pgm(.address(), .data_in(), .data_out(pgm_dat_r), .write_enable(), .clk(clock));
+// pgm_adr = 12 bits long and ip = 32 bits long
+wire [11:0] pgm_adr = ip[11:0];	// input
+wire [63:0] pgm_dat_r;			// output
+// read-only
+memory #(.data_size(64), .address_size(12)) pgm(.address(pgm_adr), .data_in(), .data_out(pgm_dat_r), .write_enable(1'b0), .clk(clock));
 
 
 // -------Data Memory (e.g Packet Data)------- (WIP)
 // max data memory words is 2048 = 2^11
+// data_adr = 11 bits long
+// inputs
 reg data_stb;
 wire data_stb_wire = data_stb;
-wire [63:0] data_adr;
+reg [10:0] data_adr;
+wire [10:0] data_adr_wire = data_adr;
 reg data_we;
 wire data_we_wire = data_we;
-wire data_ww;
-wire [63:0] data_dat_w;
+reg [3:0] data_ww;
+wire [3:0] data_ww_wire = data_ww;
+reg [63:0] data_dat_w;
+wire [63:0] data_dat_w_wire = data_dat_w;
 
-reg [63:0] data_dat_r;
-reg [63:0] data_dat_r2;
-reg [63:0] data_dat_r4;
-reg [63:0] data_dat_r8;
-reg data_ack;
+// outputs
+wire [63:0] data_dat_r8;
+wire [7:0] data_dat_r = data_dat_r8[7:0];
+wire [15:0] data_dat_r2 = data_dat_r8[15:0];
+wire [31:0] data_dat_r4 = data_dat_r8[31:0];
+wire data_ack;
 
-module memory #(data_size = 64, address_size = 11) data_mem(.address(), .data_in(), .data_out(), .write_enable(), .clk(clock));
-
-
-// -------64 Bit Math Divider-------
-wire arsh64_stb, arsh64_arith, arsh64_left;
-wire [63:0] arsh64_value;
-wire [63:0] arsh64_shift;
-
-reg [63:0] arsh64_out;
-reg arsh64_ack;
-
-module shifter #(data_width = 64) arsh64(.stb(arsh64_stb), .clk(clock), .arith(arsh64_arith), .left(arsh64_left), .value(arsh64_value), .shift(arsh64_shift), .out(arsh64_out), .ack(arsh64_ack));
+data_memory #(.data_size(64), .address_size(11)) data_mem(.stb(data_stb_wire), .adr(data_adr_wire), .we(data_we_wire), .ww(data_ww_wire), .dat_w(data_dat_w_wire), .clk(clock), .dat_r(data_dat_r8), .data_ack(data_ack));
 
 
 // -------64 Bit Logic and Arithmetic Shifter -------
+// input
+reg arsh64_stb;
+wire arsh64_stb_wire = arsh64_stb;
+reg arsh64_arith;
+wire arsh64_arith_wire = arsh64_arith;
+reg arsh64_left;
+wire arsh64_left_wire = arsh64_left;
+reg [63:0] arsh64_value;
+wire [63:0] arsh64_value_wire = arsh64_value;
+reg [63:0] arsh64_shift;
+wire [63:0] arsh64_shift_wire = arsh64_shift;
+
+// output
+wire [63:0] arsh64_out;
+wire arsh64_ack;
+
+shifter #(.data_width(64)) arsh64(.stb(arsh64_stb_wire), .clk(clock), .arith(arsh64_arith_wire), .left(arsh64_left_wire), .value(arsh64_value_wire), .shift(arsh64_shift_wire), .out(arsh64_out), .ack(arsh64_ack));
+
+
+// -------64 Bit Math Divider-------
+// input
 reg [63:0] div64_dividend;
 wire [63:0] div64_dividend_wire = div64_dividend;
 reg [63:0] div64_divisor;
@@ -374,11 +405,12 @@ wire [63:0] div64_divisor_wire = div64_divisor;
 reg div64_stb;
 wire div64_stb_wire = div64_stb;
 
-reg [63:0] div64_quotient;
-reg [63:0] div64_remainder;
-reg div64_ack, div64_err;
+// output
+wire [63:0] div64_quotient;
+wire [63:0] div64_remainder;
+wire div64_ack, div64_err;
 
-module divider #(data_width = 64) div64(.clk(clock), .reset_n(reset_n_int), .dividend(div64_dividend), .divisor(div64_divisor), .stb(div64_stb), .quotient(div64_quotient), .remainder(div64_remainder), .ack(div64_ack), .err(div64_err));
+divider #(.data_width(64)) div64(.clk(clock), .reset_n(reset_n_int), .dividend(div64_dividend_wire), .divisor(div64_divisor_wire), .stb(div64_stb_wire), .quotient(div64_quotient), .remainder(div64_remainder), .ack(div64_ack), .err(div64_err));
 
 // MSB                                                        LSB
 // | Byte 8 | Byte 7  | Byte 5-6       | Byte 1-4               |
@@ -387,20 +419,29 @@ module divider #(data_width = 64) div64(.clk(clock), .reset_n(reset_n_int), .div
 // +--------+----+----+----------------+------------------------+
 // 63     56   52   48               32                        0
 
-// -------Call Handler------- (WIP)
-wire [63:0] call_handler_func;
-wire call_handler_stb;
-wire [63:0] call_handler_r1, 
-			call_handler_r2, 
-			call_handler_r3, 
-			call_handler_r4, 
-			call_handler_r5;
-reg [63:0] call_handler_ret;
-reg call_handler_IP4_led, call_handler_IPv6_led, call_handler_pkt_err_led; 
-reg call_handler_ack, call_handler_err;
+// -------Call Handler-------
+// input
+reg [63:0] call_handler_func;
+wire [63:0] call_handler_func_wire = call_handler_func;
+reg call_handler_stb;
+wire call_handler_stb_wire = call_handler_stb;
+reg [63:0] call_handler_r1;
+wire [63:0] call_handler_r1_wire = call_handler_r1;
+reg [63:0] call_handler_r2; 
+wire [63:0] call_handler_r2_wire = call_handler_r2; 
+reg [63:0] call_handler_r3; 
+wire [63:0] call_handler_r3_wire = call_handler_r3;
+reg [63:0] call_handler_r4; 
+wire [63:0] call_handler_r4_wire = call_handler_r4;
+reg [63:0] call_handler_r5;
+wire [63:0] call_handler_r5_wire = call_handler_r5;
 
-module call_handler call_handler(.func(), .clk(), .stb(), .IP4_led(), .IPv6_led(), .pkt_err_led());
+// output
+wire [63:0] call_handler_ret;
+wire call_handler_IP4_led, call_handler_IPv6_led, call_handler_pkt_err_led; 
+wire call_handler_ack, call_handler_err;
 
+call_handler call_handler(.func(call_handler_func_wire), .clk(clock), .stb(call_handler_stb_wire), .r1(call_handler_r1_wire), .r2(call_handler_r2_wire), .r3(call_handler_r3_wire), .r4(call_handler_r4_wire), .r5(call_handler_r5_wire), .ret(call_handler_ret), .IP4_led(call_handler_IP4_led), .IPv6_led(call_handler_IPv6_led), .pkt_err_led(call_handler_pkt_err_led), .ack(call_handler_ack), .err(call_handler_err));
 
 // -------Sync Logic-------
 
@@ -424,7 +465,7 @@ always @(posedge clock or posedge reset_n) begin
 		// r1 - r5 are used as input arguments and thus are not cleared
         // but set from CSR
 		regs[1] <= r1;
-		regs[2] <= r1;
+		regs[2] <= r2;
 		regs[3] <= r3;
 		regs[4] <= r4;
 		regs[5] <= r5;
@@ -433,6 +474,7 @@ always @(posedge clock or posedge reset_n) begin
 		regs[7] <= 0;
 		regs[8] <= 0;
 		regs[9] <= 0;
+		regs[10] <= 0;
 	end 
 
 	// If halt signal high, stop CPU
@@ -453,7 +495,7 @@ always @(posedge clock or posedge reset_n) begin
 	end 
 
 	// Check for incomplete LDDW instruction
-	else if ((keep_op & instruction[56:64]) != 0) begin
+	else if ((keep_op & instruction[63:56]) != 0) begin
 		error <= 1;
 		halt <= 1;
 	end 
@@ -496,7 +538,7 @@ always @(posedge clock or posedge reset_n) begin
                             		keep_dst <= dst;
 								end
 								else begin
-									regs[dst][32:64] <= immediate;
+									regs[dst][63:32] <= immediate;
 								end
 								ip_next <= ip_next + 1;
                         		ip <= ip_next;
@@ -641,7 +683,7 @@ always @(posedge clock or posedge reset_n) begin
 									halt <= 1;
 								end // default
 							endcase // opcode
-							next_state <= STATE_DATA_FETCH;
+							state_next <= STATE_DATA_FETCH;
 						end
 						else begin
 							ip_next <= ip_next + 1;
@@ -657,8 +699,8 @@ always @(posedge clock or posedge reset_n) begin
 
 						case (opcode)
 
-							// OP_DIV_IMM
-							OP_DIV_IMM: begin
+							// EBPF_OP_DIV_IMM
+							EBPF_OP_DIV_IMM: begin
 								if (~cpu_div64_ack) begin
 									div64_dividend <= (regs[dst] & 32'hffffffff);
 									div64_divisor <= (immediate & 32'hffffffff);
@@ -671,7 +713,7 @@ always @(posedge clock or posedge reset_n) begin
 									ip <= ip_next;
 									instruction <= pgm_dat_r;
 								end
-							end // OP_DIV_IMM
+							end // EBPF_OP_DIV_IMM
 						
 							// EBPF_OP_DIV_REG
 							EBPF_OP_DIV_REG: begin
@@ -718,6 +760,7 @@ always @(posedge clock or posedge reset_n) begin
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
 									instruction <= pgm_dat_r;
+								end
 							end // EBPF_OP_MOD_REG
 
 							// EBPF_OP_ARSH_IMM
@@ -735,6 +778,7 @@ always @(posedge clock or posedge reset_n) begin
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
 									instruction <= pgm_dat_r;
+								end
 							end // EBPF_OP_ARSH_IMM
 
 							// EBPF_OP_ARSH_REG
@@ -752,6 +796,7 @@ always @(posedge clock or posedge reset_n) begin
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
 									instruction <= pgm_dat_r;
+								end
 							end // EBPF_OP_ARSH_REG
 
 							// EBPF_OP_LSH_IMM
@@ -769,6 +814,7 @@ always @(posedge clock or posedge reset_n) begin
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
 									instruction <= pgm_dat_r;
+								end
 							end // EBPF_OP_LSH_IMM
 
 							// EBPF_OP_LSH_REG
@@ -786,6 +832,7 @@ always @(posedge clock or posedge reset_n) begin
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
 									instruction <= pgm_dat_r;
+								end
 							end // EBPF_OP_LSH_REG
 
 							// EBPF_OP_RSH_IMM
@@ -803,6 +850,7 @@ always @(posedge clock or posedge reset_n) begin
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
 									instruction <= pgm_dat_r;
+								end
 							end // EBPF_OP_RSH_IMM
 
 							// EBPF_OP_RSH_REG
@@ -820,6 +868,7 @@ always @(posedge clock or posedge reset_n) begin
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
 									instruction <= pgm_dat_r;
+								end
 							end // EBPF_OP_RSH_REG
 
 							// default
@@ -980,6 +1029,14 @@ always @(posedge clock or posedge reset_n) begin
 
 							// EBPF_OP_CALL
 							EBPF_OP_CALL: begin
+								call_handler_r1 <= r1;
+								call_handler_r1 <= r2;
+								call_handler_r1 <= r3;
+								call_handler_r1 <= r4;
+								call_handler_r1 <= r5;
+								call_handler_r1 <= immediate;
+								call_handler_r1 <= 1;
+								state_next <= STATE_CALL_PENDING;
 							end // EBPF_OP_CALL
 
 							// default
@@ -1157,6 +1214,7 @@ always @(posedge clock or posedge reset_n) begin
 										halt <= 1;
 									end // default
 								endcase // opcode
+								ip <= ip_next;
 							end // default
 						endcase // opcode
 					end // OPC_JMP
@@ -1182,7 +1240,7 @@ always @(posedge clock or posedge reset_n) begin
 									state_next <= STATE_DIV_PENDING;
 									div64_stb <= 1;
 								end else begin
-									reg[dst] <= div64_quotient;
+									regs[dst] <= div64_quotient;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
 									instruction <= pgm_dat_r;
@@ -1197,7 +1255,7 @@ always @(posedge clock or posedge reset_n) begin
 									state_next <= STATE_DIV_PENDING;
 									div64_stb <= 1;
 								end else begin
-									reg[dst] <= div64_quotient;
+									regs[dst] <= div64_quotient;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
 									instruction <= pgm_dat_r;
@@ -1212,7 +1270,7 @@ always @(posedge clock or posedge reset_n) begin
 									state_next <= STATE_DIV_PENDING;
 									div64_stb <= 1;
 								end else begin
-									reg[dst] <= div64_remainder;
+									regs[dst] <= div64_remainder;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
 									instruction <= pgm_dat_r;
@@ -1227,7 +1285,7 @@ always @(posedge clock or posedge reset_n) begin
 									state_next <= STATE_DIV_PENDING;
 									div64_stb <= 1;
 								end else begin
-									reg[dst] <= div64_remainder;
+									regs[dst] <= div64_remainder;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
 									instruction <= pgm_dat_r;
@@ -1241,9 +1299,9 @@ always @(posedge clock or posedge reset_n) begin
 									arsh64_shift <= immediate;
 									arsh64_arith <= 1;
 									arsh64_left <= 0;
-									arsh_stb <= 1;
+									arsh64_stb <= 1;
 								end else begin
-									reg[dst] <= arsh64_out;
+									regs[dst] <= arsh64_out;
 									arsh64_stb <= 0;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
@@ -1258,9 +1316,9 @@ always @(posedge clock or posedge reset_n) begin
 									arsh64_shift <= regs[src];
 									arsh64_arith <= 1;
 									arsh64_left <= 0;
-									arsh_stb <= 1;
+									arsh64_stb <= 1;
 								end else begin
-									reg[dst] <= arsh64_out;
+									regs[dst] <= arsh64_out;
 									arsh64_stb <= 0;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
@@ -1275,9 +1333,9 @@ always @(posedge clock or posedge reset_n) begin
 									arsh64_shift <= immediate;
 									arsh64_arith <= 0;
 									arsh64_left <= 1;
-									arsh_stb <= 1;
+									arsh64_stb <= 1;
 								end else begin
-									reg[dst] <= arsh64_out;
+									regs[dst] <= arsh64_out;
 									arsh64_stb <= 0;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
@@ -1292,9 +1350,9 @@ always @(posedge clock or posedge reset_n) begin
 									arsh64_shift <= regs[src];
 									arsh64_arith <= 0;
 									arsh64_left <= 1;
-									arsh_stb <= 1;
+									arsh64_stb <= 1;
 								end else begin
-									reg[dst] <= arsh64_out;
+									regs[dst] <= arsh64_out;
 									arsh64_stb <= 0;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
@@ -1309,9 +1367,9 @@ always @(posedge clock or posedge reset_n) begin
 									arsh64_shift <= immediate;
 									arsh64_arith <= 0;
 									arsh64_left <= 0;
-									arsh_stb <= 1;
+									arsh64_stb <= 1;
 								end else begin
-									reg[dst] <= arsh64_out;
+									regs[dst] <= arsh64_out;
 									arsh64_stb <= 0;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
@@ -1326,9 +1384,9 @@ always @(posedge clock or posedge reset_n) begin
 									arsh64_shift <= regs[src];
 									arsh64_arith <= 0;
 									arsh64_left <= 0;
-									arsh_stb <= 1;
+									arsh64_stb <= 1;
 								end else begin
-									reg[dst] <= arsh64_out;
+									regs[dst] <= arsh64_out;
 									arsh64_stb <= 0;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
@@ -1494,6 +1552,8 @@ always @(posedge clock or posedge reset_n) begin
 end // always block
 
 // update state for next cycle
-always @(posedge clk) state<=next_state;
+always @(posedge clock) begin
+	state<=state_next;
+end
 
 endmodule

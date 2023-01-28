@@ -1,8 +1,8 @@
-module shifter(stb, arith, left, value, shift, out, ack);
+module shifter(stb, clk, arith, left, value, shift, out, ack);
 
 	parameter data_width = 64;
 
-	input stb;
+	input stb, clk;
 	input arith;
 	input left;
 	input [data_width-1:0] value;
@@ -27,7 +27,7 @@ module shifter(stb, arith, left, value, shift, out, ack);
 			ack <= 1;
 		end else if (stb) begin
 			if (~left) begin
-				tmp1 <= ~({data_width{1}} >> shift);
+				tmp1 <= ~({data_width{1'b1}} >> shift);
 				tmp2 <= (value >> shift);
 			end else begin
 				tmp2 <= (value << shift);
