@@ -345,7 +345,7 @@ wire signed [31:0] dst_reg_32_s = regs[dst];
 // --------Program Memory--------
 // max program memory words is 4096 = 2^12
 // pgm_adr = 12 bits long and ip = 32 bits long
-wire [11:0] pgm_adr = ip[11:0];	// input
+	wire [11:0] pgm_adr = ip_next[11:0];	// input
 wire [63:0] pgm_dat_r;			// output
 // read-only
 memory #(.data_size(64), .address_size(12)) pgm(.address(pgm_adr), .data_in(), .data_out(pgm_dat_r), .write_enable(1'b0), .clk(clock));
@@ -453,7 +453,7 @@ always @(posedge clock or posedge reset_n) begin
 
 		ip_next <= 0;
 		ip <= 0;
-		instruction <= pgm_dat_r;
+		instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 		state <= STATE_OP_FETCH;
 		state_next <= STATE_OP_FETCH;
 
@@ -516,7 +516,7 @@ always @(posedge clock or posedge reset_n) begin
 			STATE_OP_FETCH: begin
 				ip_next <= ip_next + 1;
 				ip <= ip_next;
-				instruction <= pgm_dat_r;
+				instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 				state_next <= STATE_DECODE;
 			end // STATE_OP_FETCH
 
@@ -542,7 +542,7 @@ always @(posedge clock or posedge reset_n) begin
 								end
 								ip_next <= ip_next + 1;
                         		ip <= ip_next;
-                        		instruction <= pgm_dat_r;
+                        		instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 							end // EBPF_OP_LDDW
 
 							// default
@@ -592,7 +592,7 @@ always @(posedge clock or posedge reset_n) begin
 							endcase // opcode
 							ip_next <= ip_next + 1;
 							ip <= ip_next;
-							instruction <= pgm_dat_r;
+							instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 						end
 					end // OPC_LDX
 
@@ -688,7 +688,7 @@ always @(posedge clock or posedge reset_n) begin
 						else begin
 							ip_next <= ip_next + 1;
 							ip <= ip_next;
-							instruction <= pgm_dat_r;
+							instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 						end
 					end // OPC_STX
 
@@ -711,7 +711,7 @@ always @(posedge clock or posedge reset_n) begin
 									regs[dst] <= div64_quotient;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
-									instruction <= pgm_dat_r;
+									instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 								end
 							end // EBPF_OP_DIV_IMM
 						
@@ -727,7 +727,7 @@ always @(posedge clock or posedge reset_n) begin
 									regs[dst] <= div64_quotient;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
-									instruction <= pgm_dat_r;
+									instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 								end
 							end // EBPF_OP_DIV_REG
 
@@ -743,7 +743,7 @@ always @(posedge clock or posedge reset_n) begin
 									regs[dst] <= div64_remainder;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
-									instruction <= pgm_dat_r;
+									instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 								end
 							end // EBPF_OP_MOD_IMM
 
@@ -759,7 +759,7 @@ always @(posedge clock or posedge reset_n) begin
 									regs[dst] <= div64_remainder;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
-									instruction <= pgm_dat_r;
+									instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 								end
 							end // EBPF_OP_MOD_REG
 
@@ -777,7 +777,7 @@ always @(posedge clock or posedge reset_n) begin
 									arsh64_stb <= 0;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
-									instruction <= pgm_dat_r;
+									instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 								end
 							end // EBPF_OP_ARSH_IMM
 
@@ -795,7 +795,7 @@ always @(posedge clock or posedge reset_n) begin
 									arsh64_stb <= 0;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
-									instruction <= pgm_dat_r;
+									instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 								end
 							end // EBPF_OP_ARSH_REG
 
@@ -813,7 +813,7 @@ always @(posedge clock or posedge reset_n) begin
 									arsh64_stb <= 0;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
-									instruction <= pgm_dat_r;
+									instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 								end
 							end // EBPF_OP_LSH_IMM
 
@@ -831,7 +831,7 @@ always @(posedge clock or posedge reset_n) begin
 									arsh64_stb <= 0;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
-									instruction <= pgm_dat_r;
+									instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 								end
 							end // EBPF_OP_LSH_REG
 
@@ -849,7 +849,7 @@ always @(posedge clock or posedge reset_n) begin
 									arsh64_stb <= 0;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
-									instruction <= pgm_dat_r;
+									instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 								end
 							end // EBPF_OP_RSH_IMM
 
@@ -867,7 +867,7 @@ always @(posedge clock or posedge reset_n) begin
 									arsh64_stb <= 0;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
-									instruction <= pgm_dat_r;
+									instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 								end
 							end // EBPF_OP_RSH_REG
 
@@ -1017,7 +1017,7 @@ always @(posedge clock or posedge reset_n) begin
 								endcase // opcode
 								ip_next <= ip_next + 1;
 								ip <= ip_next;
-								instruction <= pgm_dat_r;
+								instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 							end // default
 						endcase // opcode
 					end // OPC_ALU
@@ -1243,7 +1243,7 @@ always @(posedge clock or posedge reset_n) begin
 									regs[dst] <= div64_quotient;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
-									instruction <= pgm_dat_r;
+									instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 								end
 							end // EBPF_OP_DIV64_IMM
 
@@ -1258,7 +1258,7 @@ always @(posedge clock or posedge reset_n) begin
 									regs[dst] <= div64_quotient;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
-									instruction <= pgm_dat_r;
+									instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 								end
 							end // EBPF_OP_DIV64_REG
 
@@ -1273,7 +1273,7 @@ always @(posedge clock or posedge reset_n) begin
 									regs[dst] <= div64_remainder;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
-									instruction <= pgm_dat_r;
+									instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 								end
 							end // EBPF_OP_MOD64_IMM
 
@@ -1288,7 +1288,7 @@ always @(posedge clock or posedge reset_n) begin
 									regs[dst] <= div64_remainder;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
-									instruction <= pgm_dat_r;
+									instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 								end
 							end // EBPF_OP_MOD64_REG
 
@@ -1305,7 +1305,7 @@ always @(posedge clock or posedge reset_n) begin
 									arsh64_stb <= 0;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
-									instruction <= pgm_dat_r;
+									instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 								end
 							end // EBPF_OP_ARSH64_IMM
 
@@ -1322,7 +1322,7 @@ always @(posedge clock or posedge reset_n) begin
 									arsh64_stb <= 0;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
-									instruction <= pgm_dat_r;
+									instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 								end
 							end // EBPF_OP_ARSH64_REG
 
@@ -1339,7 +1339,7 @@ always @(posedge clock or posedge reset_n) begin
 									arsh64_stb <= 0;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
-									instruction <= pgm_dat_r;
+									instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 								end
 							end // EBPF_OP_LSH64_IMM
 
@@ -1356,7 +1356,7 @@ always @(posedge clock or posedge reset_n) begin
 									arsh64_stb <= 0;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
-									instruction <= pgm_dat_r;
+									instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 								end
 							end // EBPF_OP_LSH64_REG
 
@@ -1373,7 +1373,7 @@ always @(posedge clock or posedge reset_n) begin
 									arsh64_stb <= 0;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
-									instruction <= pgm_dat_r;
+									instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 								end
 							end // EBPF_OP_RSH64_IMM
 
@@ -1390,7 +1390,7 @@ always @(posedge clock or posedge reset_n) begin
 									arsh64_stb <= 0;
 									ip_next <= ip_next + 1;
 									ip <= ip_next;
-									instruction <= pgm_dat_r;
+									instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 								end
 							end // EBPF_OP_RSH64_REG
 
@@ -1480,7 +1480,7 @@ always @(posedge clock or posedge reset_n) begin
 								endcase // opcode
 								ip_next <= ip_next + 1;
 								ip <= ip_next;
-								instruction <= pgm_dat_r;
+								instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
 							end // default	
 						endcase // opcode
 					end // OPC_ALU64
@@ -1543,7 +1543,7 @@ always @(posedge clock or posedge reset_n) begin
                     	state_next <= STATE_DECODE;
                     	ip_next <= ip_next + 1;
                     	ip <= ip_next;
-                    	instruction <= pgm_dat_r;
+                    	instruction <= {pgm_dat_r[7:0], pgm_dat_r[15:8], pgm_dat_r[23:16], pgm_dat_r[31:24], pgm_dat_r[39:32], pgm_dat_r[47:40], pgm_dat_r[55:48], regs[dst][63:56]};
                     end
                 end
 			end // STATE_CALL_PENDING
